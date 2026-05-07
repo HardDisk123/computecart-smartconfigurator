@@ -1,11 +1,176 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+.btn-gradient {
+    background: linear-gradient(90deg, #007bff, #6610f2);
+    color: #fff;
+    border: none;
 }
+.btn-gradient:hover {
+    opacity: 0.9;
+}
+.carousel-inner img {
+    object-fit: cover;
+    height: 350px;
+}
+
+.carousel-inner img {
+    object-fit: cover;
+    height: 450px;
+}
+.carousel-caption {
+    background: rgba(0,0,0,0.5);
+    border-radius: 8px;
+    padding: 10px 15px;
+}
+
+img[alt="ComputeCart Logo"] {
+    filter: drop-shadow(0 0 10px rgba(0, 123, 255, 0.7));
+}
+
+.logo-hero {
+    max-width: 400px;       /* Bigger size */
+    transition: transform 0.4s ease, filter 0.4s ease;
+    filter: drop-shadow(0 0 15px rgba(0, 123, 255, 0.6));
+}
+.logo-hero:hover {
+    transform: scale(1.1);  /* Zoom effect on hover */
+    filter: drop-shadow(0 0 25px rgba(102, 16, 242, 0.8));
+}
+
+/* Logo styling */
+.logo-hero {
+    max-width: 400px;
+    transition: transform 0.4s ease, filter 0.4s ease;
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.6));
+}
+.logo-hero:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 25px rgba(0,0,0,0.8));
+}
+
+/* Black buttons */
+.btn-dark {
+    background-color: #000;
+    border: none;
+    color: #fff;
+}
+.btn-dark:hover {
+    background-color: #333;
+    color: #fff;
+}
+
+.footer-logo {
+    max-width: 50px;       /* Adjust size */
+    transition: transform 0.3s ease, filter 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.4));
+}
+.footer-logo:hover {
+    transform: scale(1.0);  /* Subtle zoom on hover */
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.6));
+}
+
+body {
+    background-color: #121212;
+    color: #fff;
+}
+
+.navbar-dark .nav-link {
+    color: #fff;
+}
+.navbar-dark .nav-link:hover {
+    color: #0d6efd; /* neon blue accent */
+}
+
+.btn-dark {
+    background-color: #000;
+    border: none;
+    color: #fff;
+}
+.btn-dark:hover {
+    background-color: #333;
+}
+
+.card {
+    background-color: #1e1e1e;
+    color: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.6);
+}
+
+.footer-logo {
+    max-width: 80px;
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.6));
+}
+
+/* Animated gradient background */
+.hero-section {
+    background: linear-gradient(-45deg, #000, #1a1a1a, #333, #000);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+}
+@keyframes gradientBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+/* Product badges */
+.badge-hot {
+    background-color: #dc3545; /* red */
+}
+.badge-new {
+    background-color: #0d6efd; /* blue */
+}
+.badge-best {
+    background-color: #198754; /* green */
+}
+
+/* Hover glow for icons */
+.icon-hover:hover {
+    color: #0d6efd;
+    text-shadow: 0 0 10px #0d6efd;
+}
+
+.category-card {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.category-card img {
+  display: block;
+  transition: filter 0.3s ease;
+}
+
+.category-card .overlay-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.category-card:hover img {
+  filter: brightness(0); /* darken to black */
+}
+
+.category-card:hover .overlay-text {
+  opacity: 1; /* show text */
+}
+
+
+
+
+
