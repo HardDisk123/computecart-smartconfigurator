@@ -46,6 +46,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('configurator.show') }}">SmartConfigurator</a>
                 </li>
+                <!-- ✅ Added Attendance -->
+                <li class="nav-item"><a class="nav-link" href="{{ route('attendance.kiosk') }}">Attendance</a></li>
+                
+                <!-- ✅ Added Queue -->
+                <li class="nav-item"><a class="nav-link" href="{{ route('queue.manage') }}">Queue</a></li>
+
 
                 @auth
                     @if(Auth::user()->role_id == 1)

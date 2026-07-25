@@ -1,0 +1,4 @@
+/* queue.css — small visual polish for queue UI */
+.card-shadow { box-shadow: 0 10px 24px rgba(15,23,42,0.06); border-radius: 8px; }
+.list-group-item { border-radius: 6px; margin-bottom: 8px; }
+.alert.position-fixed { min-width: 220px; }

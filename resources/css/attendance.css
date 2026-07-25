@@ -1,0 +1,7 @@
+/* attendance.css — small visual polish */
+.card-shadow { box-shadow: 0 10px 30px rgba(15,23,42,0.06); border-radius: 10px; }
+.ratio .bg-dark { border-radius: 8px; }
+#cameraPreview { min-height: 220px; border-radius: 8px; }
+@media (max-width: 576px) {
+  #cameraPreview { min-height: 180px; }
+}

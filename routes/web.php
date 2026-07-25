@@ -5,6 +5,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminCategoryController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ConfiguratorController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\QueueController;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Order;
@@ -133,6 +135,14 @@ Route::delete('/cart/remove/{item}', [CartController::class, 'remove'])->name('c
 Route::get('/configurator', [ConfiguratorController::class, 'show'])->name('configurator.show');
 Route::post('/configurator/recommend', [ConfiguratorController::class, 'recommend'])->name('configurator.recommend');
 Route::post('/configurator/add-to-cart', [ConfiguratorController::class, 'addToCart'])->name('configurator.addToCart');
+
+// ✅ Attendance routes
+Route::get('/attendance/kiosk', [AttendanceController::class, 'kiosk'])->name('attendance.kiosk');
+Route::get('/attendance/manage', [AttendanceController::class, 'manage'])->name('attendance.manage');
+Route::get('/attendance/reports', [AttendanceController::class, 'reports'])->name('attendance.reports');
+
+// ✅ Queue routes
+Route::get('/queue/manage', [QueueController::class, 'manage'])->name('queue.manage');
 
 // ✅ Checkout routes (handled by CheckoutController)
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');

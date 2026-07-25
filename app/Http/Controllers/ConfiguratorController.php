@@ -21,33 +21,52 @@ class ConfiguratorController extends Controller
      * Always returns JSON; catches exceptions and logs details.
      */
     public function recommend(Request $request, ConfiguratorService $service)
-    {
-        try {
-            $payload = $request->only([
-                'budget','purpose','cpu_pref','ram_pref','form_factor','target_price',
-                'resolution','prefer_silent','prefer_budget_parts'
-            ]);
+{
+    try {
+        Log::info('Configurator payload', $request->all());
 
-            $result = $service->recommendBuild($payload);
+        $payload = $request->only([
+            'budget',
+            'purpose',
+            'cpu_pref',
+            'ram_pref',
+            'form_factor',
+            'target_price',
+            'resolution',
+            'prefer_silent',
+            'prefer_budget_parts'
+        ]);
 
-            if (!is_array($result) || !array_key_exists('components', $result)) {
-                Log::error('ConfiguratorController::recommend unexpected service response', ['result' => $result]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unexpected service response format.'
-                ], 500);
-            }
+        $result = $service->recommendBuild($payload);
 
-            return response()->json($result);
-        } catch (\Throwable $e) {
-            Log::error('ConfiguratorController::recommend error: '.$e->getMessage(), ['trace' => $e->getTraceAsString(), 'input' => $request->all()]);
+        if (!is_array($result) || !isset($result['components'])) {
+            Log::error('Invalid service response', ['result' => $result]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Server error while computing recommendation.',
-                'error' => $e->getMessage()
+                'message' => 'Invalid recommendation response format'
             ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'components' => $result['components'],
+            'explanation' => $result['explanation'] ?? '',
+            'compatibility' => $result['compatibility'] ?? []
+        ]);
+
+    } catch (\Throwable $e) {
+        Log::error('Recommendation error', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Server error: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Minimal add-to-cart stub for the demo.
@@ -55,7 +74,9 @@ class ConfiguratorController extends Controller
     public function addToCart(Request $request)
     {
         $components = $request->input('components', []);
-        // In production: add to cart logic here.
-        return response()->json(['success' => true, 'added' => $components]);
+        return response()->json([
+            'success' => true,
+            'added' => $components
+        ], 200);
     }
 }
