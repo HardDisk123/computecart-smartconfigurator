@@ -4,7 +4,7 @@
         <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ route('home') }}">
             <img src="{{ asset('images/ComputeCart Logo.png') }}" 
                  alt="ComputeCart Logo" 
-                 style="height:70px; width:70; object-fit:contain;" 
+                 style="height:70px; width:70px; object-fit:contain;" 
                  class="me-2">
             ComputeCart
         </a>
@@ -46,14 +46,31 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('configurator.show') }}">SmartConfigurator</a>
                 </li>
-                <!-- ✅ Added Attendance -->
-                <li class="nav-item"><a class="nav-link" href="{{ route('attendance.kiosk') }}">Attendance</a></li>
-                
-                <!-- ✅ Added Queue -->
-                <li class="nav-item"><a class="nav-link" href="{{ route('queue.manage') }}">Queue</a></li>
 
-
+                <!-- ✅ Added Reports Dropdown Menu -->
                 @auth
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle fw-semibold" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            📊 Reports
+                        </a>
+                        <ul class="dropdown-menu shadow" aria-labelledby="reportsDropdown">
+                            <li><h6 class="dropdown-header text-uppercase fw-bold text-primary">Build Reports</h6></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.budget') }}">💰 Budget Allocation</a></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.history') }}">📜 Build History</a></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.compatibility') }}">✅ Component Compatibility</a></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.alternatives') }}">🔄 Alternative Parts</a></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.benchmark') }}">⚡ Performance Benchmark</a></li>
+                            <li><a class="dropdown-item" href="{{ route('reports.explanation') }}">🧠 Recommendation Rationale</a></li>
+
+                            @if(Auth::user()->role_id == 1)
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header text-uppercase fw-bold text-danger">Admin Reports</h6></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.reports.inventory') }}">📦 Inventory Availability</a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.reports.trends') }}">🔥 Popular Build Trends</a></li>
+                            @endif
+                        </ul>
+                    </li>
+
                     @if(Auth::user()->role_id == 1)
                         <!-- ✅ Admin Dashboard link only for admins -->
                         <li class="nav-item">

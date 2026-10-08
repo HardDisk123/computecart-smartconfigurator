@@ -11,14 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('components', function (Blueprint $table) {
+        // 1. If the components table doesn't exist, create it from scratch
+        if (!Schema::hasTable('components')) {
+            Schema::create('components', function (Blueprint $table) {
+                $table->string('id')->primary();
+                $table->string('name');
+                $table->string('category');
+                $table->decimal('price', 10, 2)->nullable();
+                $table->json('specs')->nullable();
+                $table->integer('tier')->default(1);
+                $table->timestamps();
+            });
 
-            // ✅ FIX: make sure id is STRING (IMPORTANT FOR YOUR SEEDER)
+            return;
+        }
+
+        // 2. If the table already exists, safely add/update missing columns
+        Schema::table('components', function (Blueprint $table) {
             if (Schema::hasColumn('components', 'id')) {
                 $table->string('id')->change();
             }
 
-            // ✅ Add missing columns safely
             if (!Schema::hasColumn('components', 'name')) {
                 $table->string('name')->after('id');
             }
@@ -46,12 +59,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('components', function (Blueprint $table) {
-
-            $table->dropColumn(['name', 'category', 'price', 'specs', 'tier']);
-
-            // optional rollback (only if needed)
-            // $table->unsignedBigInteger('id')->change();
-        });
+        Schema::dropIfExists('components');
     }
 };

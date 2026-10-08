@@ -1,419 +1,623 @@
-{{-- resources/views/configurator.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'SmartConfigurator — ComputeCart')
+@section('title', 'Smart PC Configurator | Next-Gen Custom PC Builder')
 
-@section('styles')
-<style>
-:root{
-  --bg:#050505; --muted:#9fb0c8; --white:#ffffff;
-  --accent-start:#0066ff; --accent-end:#00b4ff;
-  --card-border:rgba(255,255,255,0.03); --radius:10px; --shadow:0 10px 30px rgba(0,0,0,0.7);
-}
-.configurator-wrap { max-width:1120px;margin:28px auto;padding:18px;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;color:var(--white);background:linear-gradient(180deg,var(--bg),#070707); }
-.config-hero { background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid var(--card-border);box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:12px; }
-.config-hero h1{margin:0;font-size:1.6rem;font-weight:700} .config-hero p.lead{margin:6px 0 0 0;color:var(--muted)}
-.card{background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.005));border-radius:12px;border:1px solid var(--card-border);padding:16px;box-shadow:var(--shadow);margin-top:16px;}
-.wizard-step{padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);background:rgba(255,255,255,0.01)}
-.wizard-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form-select,.form-control{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 10px}
-.progress{background:rgba(255,255,255,0.02);height:8px;border-radius:8px;overflow:hidden}
-.progress-bar{background:linear-gradient(90deg,var(--accent-end),var(--accent-start));height:100%;transition:width .25s ease}
-.btn-primary-glow{padding:10px 16px;border-radius:8px;border:none;color:#fff;background:linear-gradient(90deg,var(--accent-start),var(--accent-end));cursor:pointer;box-shadow:0 10px 30px rgba(0,102,255,0.12);transition:transform .16s ease;font-weight:600}
-.btn-primary-glow:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(0,102,255,0.18)}
-.btn-ghost{padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--white);cursor:pointer}
-#result-components{list-style:none;padding:0;margin:0}
-.cc-card{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px;margin-bottom:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.005))}
-.cc-title{font-weight:700;color:var(--white);margin-bottom:6px}
-.cc-sub{color:var(--muted);font-size:0.92rem}
-.cc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.cc-chip{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);color:var(--muted);font-size:0.82rem;border:1px solid rgba(255,255,255,0.03)}
-.cc-price .price{font-weight:800;color:var(--white);font-size:1.05rem}
-.small-muted{color:var(--muted)}
-@media (max-width:800px){ .wizard-grid{grid-template-columns:1fr} .cc-card{flex-direction:column} }
-</style>
-@endsection
+@push('styles')
+    <style>
+        /* Configurator specific custom styles */
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #000000;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Fixed Button Sizes & Position Locking */
+        .btn-glow-black,
+        .btn-dark,
+        .btn-outline-dark,
+        .fps-preset-btn,
+        .btn-check + .btn-outline-dark {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* Black Glow Effect on Cursor Hover & Active/Focus States */
+        .btn-glow-black:hover,
+        .btn-glow-black:focus,
+        .btn-dark:hover,
+        .btn-dark:focus,
+        .btn-outline-dark:hover,
+        .btn-outline-dark:focus,
+        .btn-check + .btn-outline-dark:hover,
+        .btn-check:checked + .btn-outline-dark,
+        .fps-preset-btn:hover,
+        .fps-preset-btn.active {
+            box-shadow: 0 0 16px rgba(0, 0, 0, 0.8), 0 0 6px rgba(0, 0, 0, 0.9) !important;
+            transform: translateY(-1px);
+        }
+
+        .btn-dark:active,
+        .btn-outline-dark:active {
+            transform: translateY(0);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        /* Standardized Button Heights & Single-Line Formatting */
+        .btn-check + .btn-outline-dark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 42px;
+            min-height: 42px;
+            max-height: 42px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            padding: 0 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #submit-btn {
+            height: 48px;
+            min-height: 48px;
+            white-space: nowrap;
+        }
+
+        #add-to-cart-btn {
+            height: 42px;
+            min-height: 42px;
+            white-space: nowrap;
+        }
+
+        .fps-preset-btn {
+            height: 32px;
+            min-width: 65px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Table Styles for Hardware Specifications */
+        .report-table-container {
+            border: 1px solid #eaedf2;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .table.report-table {
+            margin-bottom: 0;
+            vertical-align: middle;
+        }
+
+        .table.report-table th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 0.85rem 1rem;
+            border-bottom: 2px solid #eaedf2;
+        }
+
+        .table.report-table td {
+            padding: 1rem;
+            color: #212529;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 0.9rem;
+        }
+
+        .table.report-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table.report-table tbody tr:hover {
+            background-color: #fcfdfe;
+        }
+
+        @media print {
+            .no-print, header, footer, #bg-video, .center-background {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+        }
+    </style>
+@endpush
 
 @section('content')
-<div class="configurator-wrap">
-  <div class="config-hero">
-    <div>
-      <h1>SmartConfigurator</h1>
-      <p class="lead small-muted">Guided Build Assistant — compatibility‑checked, explainable recommendations.</p>
-    </div>
-    <div style="text-align:right;">
-      <div class="small-muted">ComputeCart</div>
-      <div style="font-weight:700;color:var(--white)">Build Assistant</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <div>
-        <small class="small-muted">Step <span id="current-step">1</span> of <span id="total-steps">4</span></small>
-        <div style="font-weight:600;color:var(--white);margin-top:6px;">Step <span id="current-step-label">1</span> — <span id="current-step-title">Choose Budget</span></div>
-      </div>
-      <div style="width:320px;">
-        <div class="progress"><div id="progress-bar" class="progress-bar" style="width:25%"></div></div>
-      </div>
-    </div>
-
-    <div id="wizard">
-      <section class="wizard-step" data-step="1">
-        <h5>Step 1 — Choose Budget</h5>
-        <p class="small-muted">Pick a budget range to guide component tiers.</p>
-        <div class="wizard-grid" style="margin-top:10px;">
-          <div>
-            <label class="small-muted">Budget Range</label>
-            <select id="budget" class="form-select">
-              <option value="<800">&lt; ₱40,000 (Entry)</option>
-              <option value="800-1500">₱40,000 - ₱75,000 (Mid)</option>
-              <option value=">1500">&gt; ₱75,000 (High)</option>
-            </select>
-          </div>
-          <div>
-            <label class="small-muted">Target Price (optional)</label>
-            <input id="target-price" type="number" class="form-control" placeholder="e.g., 50000">
-          </div>
-          <div>
-            <label class="small-muted">Why this matters</label>
-            <div class="small-muted" style="padding:8px;background:rgba(255,255,255,0.01);border-radius:6px">Budget narrows component tiers and helps balance CPU/GPU choices.</div>
-          </div>
-          <div>
-            <label class="small-muted">Quick tip</label>
-            <div class="small-muted" style="padding:8px;background:rgba(255,255,255,0.01);border-radius:6px">Use target price to nudge recommendations toward a specific total.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="wizard-step" data-step="2" style="display:none;">
-        <h5>Step 2 — Purpose & Resolution</h5>
-        <p class="small-muted">Tell us what you'll use the PC for and the display target.</p>
-        <div class="wizard-grid" style="margin-top:10px;">
-          <div>
-            <label class="small-muted">Primary Purpose</label>
-            <select id="purpose" class="form-select">
-              <option value="Gaming">Gaming</option>
-              <option value="Office">Office / Productivity</option>
-              <option value="Workstation">Workstation (Rendering, CAD)</option>
-              <option value="Streaming">Streaming / Content Creation</option>
-            </select>
-          </div>
-          <div>
-            <label class="small-muted">Primary Resolution</label>
-            <select id="resolution" class="form-select">
-              <option value="1080p">1080p</option>
-              <option value="1440p">1440p</option>
-              <option value="4k">4K</option>
-            </select>
-          </div>
-          <div style="grid-column:1 / -1">
-            <label class="small-muted">Why this matters</label>
-            <div class="small-muted" style="padding:8px;background:rgba(255,255,255,0.01);border-radius:6px">Purpose and resolution determine GPU tier and CPU balance.</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="wizard-step" data-step="3" style="display:none;">
-        <h5>Step 3 — Preferences</h5>
-        <p class="small-muted">Optional preferences to refine the build.</p>
-        <div class="wizard-grid" style="margin-top:10px;">
-          <div>
-            <label class="small-muted">CPU Preference</label>
-            <select id="cpu_pref" class="form-select">
-              <option value="">No preference</option>
-              <option value="Intel">Intel</option>
-              <option value="AMD">AMD</option>
-            </select>
-          </div>
-          <div>
-            <label class="small-muted">RAM Type</label>
-            <select id="ram_pref" class="form-select">
-              <option value="">No preference</option>
-              <option value="DDR4">DDR4</option>
-              <option value="DDR5">DDR5</option>
-            </select>
-          </div>
-          <div>
-            <label class="small-muted">Form Factor</label>
-            <select id="form_factor" class="form-select">
-              <option value="">Any</option>
-              <option value="ATX">ATX</option>
-              <option value="mATX">mATX</option>
-              <option value="ITX">ITX</option>
-            </select>
-          </div>
-          <div>
-            <label class="small-muted">Other preferences</label>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label style="display:flex;align-items:center;gap:8px"><input id="prefer_silent" type="checkbox" /> <span class="small-muted">Prefer quieter components</span></label>
-              <label style="display:flex;align-items:center;gap:8px"><input id="prefer_budget_parts" type="checkbox" /> <span class="small-muted">Prefer cost-effective parts</span></label>
+    <!-- Top Toast Notification -->
+    <div id="toast" class="toast-container position-fixed bottom-0 end-0 p-3 no-print" style="z-index: 2000;">
+        <div id="toast-inner" class="toast align-items-center text-bg-dark border-0 hide" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-message"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-          </div>
         </div>
-      </section>
+    </div>
 
-      <section class="wizard-step" data-step="4" style="display:none;">
-        <h5>Step 4 — Review & Get Recommendation</h5>
-        <p class="small-muted">Review your choices before requesting a recommended build.</p>
-        <div id="review-summary" style="margin-top:10px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02)">
-          <div><strong class="small-muted">Budget:</strong> <span id="rev-budget" class="small-muted"></span></div>
-          <div><strong class="small-muted">Purpose:</strong> <span id="rev-purpose" class="small-muted"></span></div>
-          <div><strong class="small-muted">Preferences:</strong> <span id="rev-prefs" class="small-muted"></span></div>
+    <div class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        
+        <!-- Header Title Banner -->
+        <div class="mb-4 pb-3 border-bottom d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 text-start">
+            <div class="text-start">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-dark font-mono text-uppercase tracking-widest">BUILD ENGINE</span>
+                    <span class="font-mono text-muted text-uppercase" style="font-size: 11px;">• Hardware Telemetry Active</span>
+                </div>
+                <h1 class="h3 fw-black text-dark text-uppercase mb-1">Smart PC Configurator</h1>
+                <p class="text-muted small mb-0">Guided Hardware Assistant — compatibility-checked, explainable recommendations.</p>
+            </div>
+            <div>
+                <span class="badge bg-light text-dark border font-mono d-inline-flex align-items-center gap-2 px-3 py-2">
+                    <span class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 8px; height: 8px;"></span>
+                    SYSTEM ONLINE
+                </span>
+            </div>
         </div>
-      </section>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
-        <button id="btn-prev" type="button" class="btn-ghost" disabled>Previous</button>
-        <button id="btn-next" type="button" class="btn-primary-glow">Next</button>
-      </div>
+        <div class="row g-4 align-items-start">
+            
+            <!-- LEFT PANEL: CONFIGURATOR FORM & PREFERENCES (4 cols) -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border p-4 rounded-4">
+                    <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom">
+                        <h2 class="h6 fw-black text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-sliders text-xs"></i> Build Parameters
+                        </h2>
+                        <span class="badge bg-light text-dark font-mono text-uppercase border" style="font-size: 10px;">Parameters</span>
+                    </div>
+
+                    <form id="configurator-form" class="vstack gap-4">
+                        <!-- Budget Selector -->
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label font-mono fw-bold text-uppercase text-secondary fs-7 mb-0">Target Budget</label>
+                                <span id="budget-display" class="font-mono fs-7 fw-bold text-dark bg-light px-3 py-1 rounded border">₱65,000</span>
+                            </div>
+                            <input type="range" id="target_price" name="target_price" min="25000" max="150000" step="5000" value="65000" class="form-range">
+                        </div>
+
+                        <!-- Target Resolution -->
+                        <div>
+                            <label class="form-label font-mono fw-bold text-uppercase text-secondary fs-7 mb-2">Target Resolution</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="resolution" id="res-1080p" value="1080p" checked>
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="res-1080p">1080p</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="resolution" id="res-1440p" value="1440p">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="res-1440p">1440p 2K</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="resolution" id="res-4k" value="4k">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="res-4k">4K UHD</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Primary Purpose -->
+                        <div>
+                            <label class="form-label font-mono fw-bold text-uppercase text-secondary fs-7 mb-2">Primary Workload</label>
+                            <select name="purpose" class="form-select form-select-sm py-2 fw-bold text-dark">
+                                <option value="Gaming & Streaming" selected>Pure Gaming & Esports</option>
+                                <option value="Content Creation & Video Editing">Video Editing & 3D Rendering</option>
+                                <option value="Software Engineering & AI Workloads">Software Development & AI Workloads</option>
+                            </select>
+                        </div>
+
+                        <!-- CPU Preference -->
+                        <div>
+                            <label class="form-label font-mono fw-bold text-uppercase text-secondary fs-7 mb-2">Processor Brand</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="cpu_pref" id="cpu-any" value="any" checked>
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="cpu-any">Any Best</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="cpu_pref" id="cpu-amd" value="AMD">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="cpu-amd">AMD Ryzen</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="cpu_pref" id="cpu-intel" value="Intel">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="cpu-intel">Intel Core</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Factor -->
+                        <div>
+                            <label class="form-label font-mono fw-bold text-uppercase text-secondary fs-7 mb-2">Case Form Factor</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="form_factor" id="ff-atx" value="ATX" checked>
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="ff-atx">Mid ATX</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="form_factor" id="ff-matx" value="mATX">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="ff-matx">Micro-ATX</label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="form_factor" id="ff-itx" value="ITX">
+                                    <label class="btn btn-outline-dark w-100 fw-bold text-nowrap px-1" for="ff-itx">Mini-ITX</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button with Glow Effect -->
+                        <button type="submit" id="submit-btn" class="btn btn-dark btn-glow-black w-100 py-3 fw-bold text-uppercase tracking-wider fs-7 d-flex align-items-center justify-content-center gap-2 mt-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Generate Recommended Build</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: BENCHMARKS & HARDWARE RESULTS (8 cols) -->
+            <div class="col-lg-8 vstack gap-4">
+
+                <!-- Summary Bar Card -->
+                <div class="card shadow-sm border p-4 rounded-4 d-flex flex-row align-items-center justify-content-between flex-wrap gap-3">
+                    <div>
+                        <span class="font-mono text-uppercase text-muted fw-bold d-block mb-1" style="font-size: 10px;">Estimated System Cost</span>
+                        <div class="d-flex align-items-baseline gap-3">
+                            <span id="total-price-display" class="h3 fw-black font-mono text-dark mb-0">₱0.00</span>
+                            <span id="compat-badge" class="badge bg-light text-dark border font-mono d-inline-flex align-items-center gap-2 text-uppercase">
+                                <i class="fa-solid fa-shield-check text-success"></i> 100% Compatible
+                            </span>
+                        </div>
+                    </div>
+
+                    <button id="add-to-cart-btn" class="btn btn-dark btn-glow-black fw-bold py-2 px-4 text-uppercase tracking-wider fs-7 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-cart-plus"></i>
+                        <span>Add Build to Cart</span>
+                    </button>
+                </div>
+
+                <!-- Compatibility Warnings Slot -->
+                <div id="warnings-container" class="d-none alert alert-warning border border-warning-subtle text-dark rounded-4 p-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="fa-solid fa-triangle-exclamation text-warning fs-5 mt-1"></i>
+                        <div>
+                            <h6 class="font-mono text-uppercase fw-bold mb-1">Compatibility Consideration</h6>
+                            <ul id="warnings-list" class="small mb-0 ps-3"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic FPS Benchmark Dashboard -->
+                <div class="card shadow-sm border p-4 rounded-4">
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between pb-3 border-bottom gap-3">
+                        <div>
+                            <h3 class="h6 fw-black text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-gauge-high text-xs"></i> FPS Performance Engine
+                            </h3>
+                            <p class="text-muted small mb-0 mt-1">Estimated average frame rates based on hardware synergy</p>
+                        </div>
+
+                        <!-- Graphics Quality Preset Toggles -->
+                        <div class="btn-group bg-light p-1 rounded-3 border" role="group">
+                            <button type="button" data-preset="low" class="fps-preset-btn btn btn-sm btn-light border-0 font-mono fw-bold text-muted">Low</button>
+                            <button type="button" data-preset="med" class="fps-preset-btn btn btn-sm btn-dark font-mono fw-bold active">Medium</button>
+                            <button type="button" data-preset="high" class="fps-preset-btn btn btn-sm btn-light border-0 font-mono fw-bold text-muted">Ultra</button>
+                        </div>
+                    </div>
+
+                    <!-- FPS Game Bars Grid -->
+                    <div id="fps-bars-grid" class="mt-4 vstack gap-3">
+                        <div class="text-center py-5 text-muted font-mono small">
+                            Configure parameters and click "Generate Recommended Build" to render performance metrics.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommended Components Tabular Layout -->
+                <div class="card shadow-sm border p-4 rounded-4 vstack gap-3">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom">
+                        <h3 class="h6 fw-black text-uppercase text-dark mb-0 d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-microchip text-xs"></i> Selected Hardware Specification
+                        </h3>
+                        <span class="font-mono text-muted small fw-bold" id="item-count">0 items</span>
+                    </div>
+
+                    <div class="report-table-container">
+                        <table class="table report-table">
+                            <thead>
+                                <tr>
+                                    <th>Component / Item</th>
+                                    <th>Category</th>
+                                    <th class="text-center">Specs</th>
+                                    <th class="text-end">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="components-list">
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted font-mono small">
+                                        No build generated yet.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- AI System Explanation Card -->
+                <div class="card bg-dark text-light border-0 rounded-4 p-4">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-info fs-5 mt-1"></i>
+                        <p id="build-explanation" class="small mb-0 font-medium text-white-50">Configure your desired target budget and usage to view tailored hardware recommendations.</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
     </div>
-  </div>
-
-  <div id="result" class="card" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-      <div>
-        <h3 style="margin:0;color:var(--white)">Recommended Build</h3>
-        <p id="result-explanation" class="small-muted" style="margin:6px 0 0 0;"></p>
-      </div>
-      <div style="text-align:right;">
-        <div class="small-muted">Estimated Total</div>
-        <div id="result-price" style="font-weight:700;font-size:18px;color:var(--white)">₱0</div>
-      </div>
-    </div>
-
-    <hr style="border-color:rgba(255,255,255,0.03)">
-
-    <ul id="result-components"></ul>
-
-    <div id="compatibility-warnings" style="display:none;margin-top:12px;">
-      <div class="cc-compat">
-        <strong>Compatibility Warnings</strong>
-        <ul id="compat-list" style="margin-top:8px;"></ul>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-top:12px;">
-      <button id="btn-add-to-cart" class="btn-primary-glow">Add Build to Cart</button>
-      <button id="btn-edit-inputs" class="btn-ghost">Edit Inputs</button>
-    </div>
-  </div>
-
-  <div id="messages" style="margin-top:12px;"></div>
-</div>
 @endsection
 
-@section('scripts')
-<script>
-(function () {
-  const $ = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('configurator-form');
+            const targetPriceInput = document.getElementById('target_price');
+            const budgetDisplay = document.getElementById('budget-display');
+            const submitBtn = document.getElementById('submit-btn');
+            const totalPriceDisplay = document.getElementById('total-price-display');
+            const componentsList = document.getElementById('components-list');
+            const fpsBarsGrid = document.getElementById('fps-bars-grid');
+            const buildExplanation = document.getElementById('build-explanation');
+            const warningsContainer = document.getElementById('warnings-container');
+            const warningsList = document.getElementById('warnings-list');
+            const addToCartBtn = document.getElementById('add-to-cart-btn');
+            const itemCount = document.getElementById('item-count');
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const steps = $$('.wizard-step');
-    const totalSteps = steps.length || 4;
-    let currentStep = 1;
+            let currentFpsData = [];
+            let activePreset = 'med';
+            let currentComponents = [];
 
-    const progressBar = $('#progress-bar');
-    const currentStepEl = $('#current-step');
-    const totalStepsEl = $('#total-steps');
-    const btnNext = $('#btn-next');
-    const btnPrev = $('#btn-prev');
-    const messages = $('#messages');
+            // Safe CSRF token retriever
+            const getCsrfToken = () => {
+                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                return metaTag ? metaTag.getAttribute('content') : '{{ csrf_token() }}';
+            };
 
-    const resultCard = $('#result');
-    const resultComponents = $('#result-components');
-    const resultPrice = $('#result-price');
-    const resultExplanation = $('#result-explanation');
-    const compatWarnings = $('#compatibility-warnings');
-    const compatList = $('#compat-list');
+            // Update range slider live display
+            if (targetPriceInput && budgetDisplay) {
+                targetPriceInput.addEventListener('input', (e) => {
+                    budgetDisplay.textContent = '₱' + parseInt(e.target.value).toLocaleString();
+                });
+            }
 
-    const btnAddToCart = $('#btn-add-to-cart');
-    const btnEditInputs = $('#btn-edit-inputs');
+            // FPS Preset Selector Buttons
+            document.querySelectorAll('.fps-preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.fps-preset-btn').forEach(b => {
+                        b.classList.remove('btn-dark', 'active');
+                        b.classList.add('btn-light', 'text-muted');
+                    });
+                    btn.classList.add('btn-dark', 'active');
+                    btn.classList.remove('btn-light', 'text-muted');
+                    activePreset = btn.dataset.preset;
+                    renderFpsBars();
+                });
+            });
 
-    if (!btnNext || !btnPrev || !steps.length) {
-      console.error('Wizard initialization failed: missing elements.');
-      return;
-    }
+            // Submit Form via AJAX
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
 
-    if (totalStepsEl) totalStepsEl.textContent = totalSteps;
-    updateProgress();
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing Hardware...`;
+                    }
 
-    btnNext.addEventListener('click', onNext);
-    btnPrev.addEventListener('click', onPrev);
-    btnAddToCart && btnAddToCart.addEventListener('click', onAddToCart);
-    btnEditInputs && btnEditInputs.addEventListener('click', () => { document.getElementById('wizard').scrollIntoView({ behavior: 'smooth' }); });
+                    const formData = new FormData(form);
+                    const payload = Object.fromEntries(formData.entries());
 
-    function updateProgress() {
-      if (currentStepEl) currentStepEl.textContent = currentStep;
-      const pct = (currentStep / totalSteps) * 100;
-      if (progressBar) progressBar.style.width = pct + '%';
-      steps.forEach(s => {
-        const stepNum = Number(s.dataset.step || s.getAttribute('data-step') || 0);
-        s.style.display = (stepNum === currentStep) ? 'block' : 'none';
-      });
-      btnPrev.disabled = currentStep === 1;
-      btnNext.textContent = (currentStep === totalSteps) ? 'Get Recommendation' : 'Next';
-      const titleMap = {1:'Choose Budget',2:'Choose Purpose',3:'Preferences',4:'Review & Get Recommendation'};
-      const titleEl = document.getElementById('current-step-title');
-      if (titleEl) titleEl.textContent = titleMap[currentStep] || '';
-      const labelEl = document.getElementById('current-step-label');
-      if (labelEl) labelEl.textContent = currentStep;
-    }
+                    try {
+                        const response = await fetch("{{ route('configurator.recommend') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': getCsrfToken(),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
 
-    function onNext(e) {
-      e && e.preventDefault();
-      if (currentStep < totalSteps) {
-        currentStep++;
-        updateProgress();
-        if (currentStep === totalSteps) populateReview();
-        return;
-      }
-      getRecommendation();
-    }
+                        if (!response.ok) {
+                            throw new Error(`Server returned HTTP ${response.status}`);
+                        }
 
-    function onPrev(e) {
-      e && e.preventDefault();
-      if (currentStep > 1) {
-        currentStep--;
-        updateProgress();
-      }
-    }
+                        const data = await response.json();
 
-    function showMessage(html, type='info') {
-      if (!messages) return;
-      messages.innerHTML = `<div class="alert alert-${type}" role="alert">${html}</div>`;
-    }
-    function clearMessage(){ if (messages) messages.innerHTML = ''; }
+                        if (data.success) {
+                            currentComponents = data.components || [];
+                            currentFpsData = data.fps_estimates || [];
+                            
+                            if (totalPriceDisplay) totalPriceDisplay.textContent = data.formatted_price || '₱0.00';
+                            if (buildExplanation) buildExplanation.textContent = data.explanation || '';
 
-    function populateReview() {
-      $('#rev-budget') && ($('#rev-budget').textContent = $('#budget') ? $('#budget').value : '');
-      $('#rev-purpose') && ($('#rev-purpose').textContent = $('#purpose') ? $('#purpose').value : '');
-      const prefs = [];
-      const cpuPref = $('#cpu_pref') ? $('#cpu_pref').value : '';
-      const ramPref = $('#ram_pref') ? $('#ram_pref').value : '';
-      const formFactor = $('#form_factor') ? $('#form_factor').value : '';
-      if (cpuPref) prefs.push('CPU: ' + cpuPref);
-      if (ramPref) prefs.push('RAM: ' + ramPref);
-      if (formFactor) prefs.push('Form factor: ' + formFactor);
-      if (!prefs.length) prefs.push('No special preferences');
-      $('#rev-prefs') && ($('#rev-prefs').textContent = prefs.join(' • '));
-    }
+                            renderComponents(currentComponents);
+                            renderFpsBars();
+                            handleCompatibilityWarnings(data.compatibility);
+                            
+                            showToast('Recommended build compiled successfully!');
+                        } else {
+                            showToast('Error: ' + (data.message || 'Unable to compile recommendations'), true);
+                        }
+                    } catch (err) {
+                        console.error('Configurator Error:', err);
+                        showToast('Failed to contact server. Please verify backend routes.', true);
+                    } finally {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Generate Recommended Build</span>`;
+                        }
+                    }
+                });
+            }
 
-    function getRecommendation() {
-      clearMessage();
-      showMessage('Computing recommendation — please wait...', 'info');
+            // Render Hardware Components
+            function renderComponents(components) {
+                if (!componentsList) return;
+                componentsList.innerHTML = '';
+                if (itemCount) itemCount.textContent = `${components.length} components`;
 
-      const payload = {
-        budget: $('#budget') ? $('#budget').value : null,
-        target_price: $('#target-price') ? $('#target-price').value || null : null,
-        purpose: $('#purpose') ? $('#purpose').value : null,
-        resolution: $('#resolution') ? $('#resolution').value : null,
-        cpu_pref: $('#cpu_pref') ? $('#cpu_pref').value : null,
-        ram_pref: $('#ram_pref') ? $('#ram_pref').value : null,
-        form_factor: $('#form_factor') ? $('#form_factor').value : null,
-        prefer_silent: $('#prefer_silent') ? $('#prefer_silent').checked : false,
-        prefer_budget_parts: $('#prefer_budget_parts') ? $('#prefer_budget_parts').checked : false
-      };
+                if (!components || components.length === 0) {
+                    componentsList.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted font-mono small">
+                                No hardware items returned for these parameters.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
 
-      const url = "{{ route('configurator.recommend') }}" || '/configurator/recommend';
+                components.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const formattedPrice = '₱' + parseInt(item.price || 0).toLocaleString();
 
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify(payload)
-      })
-      .then(async (r) => {
-        const raw = await r.text();
-        let data = null;
-        try { data = raw ? JSON.parse(raw) : null; }
-        catch (parseErr) { console.error('Invalid JSON response', parseErr, raw); throw new Error('Invalid JSON response from server.'); }
+                    tr.innerHTML = `
+                        <td>
+                            <div class="fw-bold text-dark">${item.name}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary font-mono">${item.category || 'Component'}</span>
+                        </td>
+                        <td class="text-secondary small text-center">
+                            ${item.specs || 'N/A'}
+                        </td>
+                        <td class="text-end font-mono fw-bold text-dark">
+                            ${formattedPrice}
+                        </td>
+                    `;
+                    componentsList.appendChild(tr);
+                });
+            }
 
-        if (!r.ok) {
-          const serverMsg = (data && (data.message || data.error)) ? (data.message || data.error) : `Server returned ${r.status}`;
-          throw new Error(serverMsg);
-        }
-        return data;
-      })
-      .then(data => {
-        clearMessage();
-        if (!data || !Array.isArray(data.components)) {
-          showMessage(data?.message || 'No recommendation returned.', 'warning');
-          return;
-        }
-        renderRecommendation(data);
-      })
-      .catch(err => {
-        clearMessage();
-        console.error('Recommendation fetch error:', err);
-        showMessage('An error occurred while computing the recommendation: ' + (err.message || 'Unknown error'), 'danger');
-      });
-    }
+            // Render Dynamic FPS Bars
+            function renderFpsBars() {
+                if (!fpsBarsGrid) return;
+                if (!currentFpsData || !currentFpsData.length) return;
 
-    function renderRecommendation(data) {
-      resultComponents.innerHTML = '';
-      let total = 0;
-      (data.components || []).forEach(c => {
-        const li = document.createElement('li'); li.className = 'cc-card';
-        const left = document.createElement('div'); left.className = 'cc-left';
-        const title = document.createElement('div'); title.className = 'cc-title'; title.textContent = `${c.category} — ${c.name}`;
-        const meta = document.createElement('div'); meta.className = 'cc-sub'; meta.textContent = c.reason || '';
-        const chips = document.createElement('div'); chips.className = 'cc-chips';
-        (c.evidence || []).forEach(ev => {
-          const chip = document.createElement('span'); chip.className = 'cc-chip'; chip.innerHTML = `<small>${ev.label}:</small> <strong>${ev.value}</strong>`; chips.appendChild(chip);
+                fpsBarsGrid.innerHTML = '';
+                currentFpsData.forEach(game => {
+                    let fpsValue = game.medFps || 0;
+                    if (activePreset === 'low') fpsValue = game.lowFps || 0;
+                    if (activePreset === 'high') fpsValue = game.highFps || 0;
+
+                    const percentage = Math.min(Math.round((fpsValue / 300) * 100), 100);
+
+                    const card = document.createElement('div');
+                    card.className = 'vstack gap-1';
+                    card.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center fs-7">
+                            <span class="fw-bold text-dark d-flex align-items-center gap-2">
+                                <i class="fa-solid ${game.icon || 'fa-gamepad'} text-muted"></i> ${game.name}
+                            </span>
+                            <span class="font-mono fw-bold text-dark">${fpsValue} <span class="text-muted" style="font-size: 10px;">FPS</span></span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-dark" role="progressbar" style="width: ${percentage}%"></div>
+                        </div>
+                    `;
+                    fpsBarsGrid.appendChild(card);
+                });
+            }
+
+            // Display Compatibility Warnings
+            function handleCompatibilityWarnings(warnings) {
+                if (!warningsContainer || !warningsList) return;
+                
+                if (warnings && warnings.length > 0) {
+                    warningsList.innerHTML = warnings.map(w => `<li>${w}</li>`).join('');
+                    warningsContainer.classList.remove('d-none');
+                } else {
+                    warningsContainer.classList.add('d-none');
+                }
+            }
+
+            // Add Build to Cart AJAX
+            if (addToCartBtn) {
+                addToCartBtn.addEventListener('click', async () => {
+                    if (!currentComponents.length) {
+                        showToast('Please generate a build before adding to cart.', true);
+                        return;
+                    }
+
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Adding...`;
+
+                    try {
+                        const response = await fetch("{{ route('configurator.addToCart') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': getCsrfToken(),
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ components: currentComponents })
+                        });
+
+                        const res = await response.json();
+                        if (res.success) {
+                            showToast(res.message || 'Build added to cart successfully!');
+                        } else {
+                            showToast(res.message || 'Could not add to cart.', true);
+                        }
+                    } catch (e) {
+                        console.error('Add to Cart Error:', e);
+                        showToast('Failed to add components to cart.', true);
+                    } finally {
+                        addToCartBtn.disabled = false;
+                        addToCartBtn.innerHTML = `<i class="fa-solid fa-cart-plus"></i> <span>Add Build to Cart</span>`;
+                    }
+                });
+            }
+
+            // Toast helper with fallback
+            function showToast(msg, isError = false) {
+                const toastEl = document.getElementById('toast-inner');
+                const toastMessage = document.getElementById('toast-message');
+                if (!toastEl || !toastMessage) return;
+
+                toastMessage.textContent = msg;
+                toastEl.className = isError 
+                    ? 'toast align-items-center text-bg-danger border-0 show'
+                    : 'toast align-items-center text-bg-dark border-0 show';
+
+                if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                    const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3500 });
+                    bsToast.show();
+                } else {
+                    setTimeout(() => {
+                        toastEl.classList.remove('show');
+                        toastEl.classList.add('hide');
+                    }, 3500);
+                }
+            }
+
+            // Auto-trigger initial compile
+            if (form) {
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
         });
-        const reasonHtml = document.createElement('div'); reasonHtml.className = 'cc-reason-html'; reasonHtml.innerHTML = c.reason_html || '';
-        left.appendChild(title); left.appendChild(meta); left.appendChild(chips); left.appendChild(reasonHtml);
-
-        const right = document.createElement('div'); right.className = 'cc-price'; right.innerHTML = `<div class="price">₱${(Number(c.price || 0)).toLocaleString()}</div>`;
-
-        li.appendChild(left); li.appendChild(right);
-        resultComponents.appendChild(li);
-        total += Number(c.price || 0);
-      });
-
-      resultPrice.textContent = '₱' + total.toLocaleString();
-      resultExplanation.textContent = data.explanation || '';
-      resultCard.style.display = 'block';
-
-      if (data.compatibility && data.compatibility.length) {
-        compatWarnings.style.display = 'block';
-        compatList.innerHTML = '';
-        data.compatibility.forEach(w => { const li = document.createElement('li'); li.textContent = w; compatList.appendChild(li); });
-      } else {
-        compatWarnings.style.display = 'none';
-        compatList.innerHTML = '';
-      }
-
-      resultCard.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function onAddToCart() {
-      const items = Array.from(document.querySelectorAll('#result-components li')).map(li => li.dataset.productId);
-      if (!items.length) { showMessage('No components to add to cart.', 'warning'); return; }
-      showMessage('Adding build to cart...', 'info');
-      fetch("{{ route('configurator.addToCart') }}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ components: items })
-      })
-      .then(r => r.json())
-      .then(resp => {
-        clearMessage();
-        if (resp.success) { showMessage('Build added to cart. Redirecting...', 'success'); setTimeout(()=>window.location.href='/cart',800); }
-        else showMessage(resp.message || 'Failed to add build to cart.', 'danger');
-      })
-      .catch(err => { clearMessage(); console.error('Add to cart error', err); showMessage('Error adding build to cart.', 'danger'); });
-    }
-
-  });
-})();
-</script>
-@endsection
+    </script>
+@endpush

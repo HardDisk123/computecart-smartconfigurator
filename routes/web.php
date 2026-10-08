@@ -15,6 +15,8 @@ use App\Http\Controllers\ConfiguratorController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\QueueController;
+use App\Http\Controllers\UserReportController;
+use App\Http\Controllers\Admin\AdminReportController;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Order;
@@ -120,6 +122,22 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::delete('/reviews/{review}', [AdminController::class, 'deleteReview'])->name('reviews.delete');
     Route::patch('/reviews/{review}/approve', [AdminController::class, 'approveReview'])->name('reviews.approve');
     Route::patch('/reviews/{review}/reject', [AdminController::class, 'rejectReview'])->name('reviews.reject');
+});
+
+// User Report Routes
+Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
+    Route::get('/budget', [UserReportController::class, 'budgetAllocation'])->name('budget');
+    Route::get('/history', [UserReportController::class, 'buildHistory'])->name('history');
+    Route::get('/compatibility', [UserReportController::class, 'compatibility'])->name('compatibility');
+    Route::get('/alternatives', [UserReportController::class, 'alternatives'])->name('alternatives');
+    Route::get('/performance-benchmark', [UserReportController::class, 'benchmark'])->name('benchmark');
+    Route::get('/recommendation-explanation', [UserReportController::class, 'explanation'])->name('explanation');
+});
+
+// Admin Report Routes
+Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->group(function () {
+    Route::get('/inventory', [AdminReportController::class, 'inventoryAvailability'])->name('inventory');
+    Route::get('/build-trends', [AdminReportController::class, 'buildTrends'])->name('trends');
 });
 
 // ✅ Customer routes (storefront) — PUBLICLY ACCESSIBLE

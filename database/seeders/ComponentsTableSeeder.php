@@ -32,7 +32,7 @@ class ComponentsTableSeeder extends Seeder
             ],
             [
                 'id' => 'mb_asus_b460',
-                'name' => 'ASUS B460',
+                'name' => 'ASUS B460',v
                 'category' => 'Motherboard',
                 'price' => 110.00,
                 'tier' => 1,

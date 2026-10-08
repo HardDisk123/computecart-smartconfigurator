@@ -4,79 +4,108 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\ConfiguratorService;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 
 class ConfiguratorController extends Controller
 {
+    protected ConfiguratorService $configuratorService;
+
+    public function __construct(ConfiguratorService $configuratorService)
+    {
+        $this->configuratorService = $configuratorService;
+    }
+
     /**
-     * Show the configurator page.
+     * Render the main SmartConfigurator view.
      */
-    public function show()
+    public function show(): View
     {
         return view('configurator');
     }
 
     /**
-     * API: compute a recommended build and return JSON.
-     * Always returns JSON; catches exceptions and logs details.
+     * Generate optimal hardware recommendations & FPS estimates.
      */
-    public function recommend(Request $request, ConfiguratorService $service)
-{
-    try {
-        Log::info('Configurator payload', $request->all());
-
-        $payload = $request->only([
-            'budget',
-            'purpose',
-            'cpu_pref',
-            'ram_pref',
-            'form_factor',
-            'target_price',
-            'resolution',
-            'prefer_silent',
-            'prefer_budget_parts'
+    public function recommend(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'budget'              => 'nullable|string',
+            'target_price'        => 'nullable|numeric|min:0',
+            'purpose'             => 'nullable|string',
+            'resolution'          => 'nullable|string|in:1080p,1440p,4k',
+            'target_fps'          => 'nullable|numeric',
+            'cpu_pref'            => 'nullable|string',
+            'ram_pref'            => 'nullable|string',
+            'form_factor'         => 'nullable|string',
+            'prefer_silent'       => 'nullable|boolean',
+            'prefer_budget_parts' => 'nullable|boolean',
         ]);
 
-        $result = $service->recommendBuild($payload);
-
-        if (!is_array($result) || !isset($result['components'])) {
-            Log::error('Invalid service response', ['result' => $result]);
+        try {
+            $recommendation = $this->configuratorService->generateBuild($validated);
 
             return response()->json([
+                'success'       => true,
+                'components'    => $recommendation['components'],
+                'explanation'   => $recommendation['explanation'],
+                'compatibility' => $recommendation['compatibility_warnings'],
+                'fps_estimates' => $recommendation['fps_estimates'],
+                'total_price'   => $recommendation['total_price'],
+                'formatted_price' => '₱' . number_format($recommendation['total_price'], 2),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
                 'success' => false,
-                'message' => 'Invalid recommendation response format'
+                'message' => 'Failed to generate recommendation: ' . $e->getMessage(),
             ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'components' => $result['components'],
-            'explanation' => $result['explanation'] ?? '',
-            'compatibility' => $result['compatibility'] ?? []
-        ]);
-
-    } catch (\Throwable $e) {
-        Log::error('Recommendation error', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Server error: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     /**
-     * Minimal add-to-cart stub for the demo.
+     * Add entire recommended build to shopping cart session.
      */
-    public function addToCart(Request $request)
+    public function addToCart(Request $request): JsonResponse
     {
-        $components = $request->input('components', []);
-        return response()->json([
-            'success' => true,
-            'added' => $components
-        ], 200);
+        $validated = $request->validate([
+            'components'   => 'required|array|min:1',
+            'components.*' => 'required',
+        ]);
+
+        try {
+            $cart = session()->get('cart', []);
+            $addedItemsCount = 0;
+
+            foreach ($validated['components'] as $component) {
+                $productId = is_array($component) ? ($component['id'] ?? null) : $component;
+                if (!$productId) continue;
+
+                if (isset($cart[$productId])) {
+                    $cart[$productId]['quantity']++;
+                } else {
+                    $cart[$productId] = [
+                        'id'       => $productId,
+                        'name'     => $component['name'] ?? 'PC Component',
+                        'price'    => $component['price'] ?? 0,
+                        'category' => $component['category'] ?? 'Hardware',
+                        'quantity' => 1,
+                    ];
+                }
+                $addedItemsCount++;
+            }
+
+            session()->put('cart', $cart);
+
+            return response()->json([
+                'success'     => true,
+                'message'     => 'All ' . $addedItemsCount . ' build components added to cart successfully!',
+                'cart_count'  => count($cart),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not add components to cart: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

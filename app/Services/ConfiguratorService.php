@@ -2,301 +2,198 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
-
 class ConfiguratorService
 {
     /**
-     * Main entry: recommend a build.
-     * Returns a predictable array with keys: success, components, explanation, compatibility, meta.
+     * Core recommendation algorithm.
      */
-    public function recommendBuild(array $input = []): array
+    public function generateBuild(array $params): array
     {
-        try {
-            // Normalize inputs
-            $budget = $input['budget'] ?? '<800';
-            $purpose = $input['purpose'] ?? 'General';
-            $cpuPref = $input['cpu_pref'] ?? '';
-            $ramPref = $input['ram_pref'] ?? '';
-            $formFactorPref = $input['form_factor'] ?? '';
-            $targetPrice = isset($input['target_price']) && is_numeric($input['target_price']) ? (float)$input['target_price'] : null;
+        $budgetTier = $params['budget'] ?? '800-1500';
+        $targetPrice = $params['target_price'] ?? null;
+        $purpose = $params['purpose'] ?? 'Gaming & Streaming';
+        $resolution = $params['resolution'] ?? '1080p';
+        $cpuPref = $params['cpu_pref'] ?? 'any';
+        $ramPref = $params['ram_pref'] ?? 'any';
+        $formFactor = $params['form_factor'] ?? 'ATX';
 
-            // Load components (fallback dataset guaranteed)
-            $components = $this->fallbackDataset();
+        // 1. Hardware Selection Engine
+        $components = $this->selectComponents($budgetTier, $targetPrice, $purpose, $cpuPref, $ramPref, $formFactor);
 
-            // 1) Filter candidates
-            $candidates = $this->decisionTreeFilter($components, [
-                'budget' => $budget,
-                'purpose' => $purpose,
-                'cpu_pref' => $cpuPref,
-                'ram_pref' => $ramPref,
-                'form_factor' => $formFactorPref,
-                'target_price' => $targetPrice,
-            ]);
+        // 2. Compatibility Matrix Check
+        $compatibilityWarnings = $this->checkCompatibility($components);
 
-            // 2) Score using simple historical similarity
-            $scores = $this->knnScore($this->loadHistoricalBuilds(), [
-                'budget' => $budget,
-                'purpose' => $purpose,
-                'target_price' => $targetPrice,
-            ], $candidates);
+        // 3. Dynamic FPS Benchmarks
+        $fpsEstimates = $this->calculateFpsEstimates($components, $resolution);
 
-            // 3) Choose top per category
-            $chosen = $this->chooseTopPerCategory($candidates, $scores);
+        // 4. Summary & Pricing
+        $totalPrice = array_sum(array_column($components, 'price'));
+        $explanation = $this->generateExplanation($purpose, $resolution, $totalPrice, $components);
 
-            // 4) Compatibility check
-            $compatErrors = $this->checkCompatibility($chosen);
-
-            // 5) Prepare UI-friendly components array
-            $componentsWithReasons = [];
-            $totalPrice = 0.0;
-            foreach ($chosen as $category => $comp) {
-                if (!$comp) continue;
-                $score = $scores[$comp['id']] ?? 0;
-                $importance = $this->computeImportance($comp, $score, $category, $purpose, $budget);
-                $evidence = $this->buildEvidence($comp, $score, $input);
-                $reason = $this->generateReason($comp, $input, $score);
-                $reasonHtml = $this->generateReasonHtml($comp, $evidence, $importance);
-
-                $componentsWithReasons[] = [
-                    'id' => $comp['id'],
-                    'category' => $category,
-                    'name' => $comp['name'],
-                    'price' => round((float)$comp['price'], 2),
-                    'reason' => $reason,
-                    'reason_html' => $reasonHtml,
-                    'evidence' => $evidence,
-                    'importance' => $importance,
-                    'specs' => $comp['specs'] ?? [],
-                ];
-                $totalPrice += (float)($comp['price'] ?? 0);
-            }
-
-            $explanation = "Recommended build for {$purpose} within {$budget}.";
-            if ($targetPrice) $explanation .= " Target price: ₱" . number_format($targetPrice, 2);
-
-            return [
-                'success' => empty($compatErrors),
-                'components' => $componentsWithReasons,
-                'explanation' => $explanation,
-                'compatibility' => $compatErrors,
-                'meta' => [
-                    'estimated_total' => round($totalPrice, 2),
-                    'candidate_counts' => array_map(fn($c) => count($c), $candidates),
-                ],
-            ];
-        } catch (\Throwable $e) {
-            Log::error('ConfiguratorService::recommendBuild error: '.$e->getMessage(), ['trace' => $e->getTraceAsString(), 'input' => $input]);
-            return [
-                'success' => false,
-                'components' => [],
-                'explanation' => 'Failed to compute recommendation due to internal error.',
-                'compatibility' => [],
-                'meta' => ['estimated_total' => 0],
-                'message' => 'Internal service error: ' . $e->getMessage()
-            ];
-        }
-    }
-
-    protected function fallbackDataset(): array
-    {
         return [
-            ['id'=>'cpu_i5_10400','name'=>'Intel i5-10400','category'=>'CPU','price'=>150.00,'tier'=>1,'specs'=>['socket'=>'LGA1200','tdp'=>65]],
-            ['id'=>'cpu_i7_10700','name'=>'Intel i7-10700','category'=>'CPU','price'=>320.00,'tier'=>2,'specs'=>['socket'=>'LGA1200','tdp'=>65]],
-            ['id'=>'cpu_ryzen5_5600','name'=>'AMD Ryzen 5 5600','category'=>'CPU','price'=>180.00,'tier'=>1,'specs'=>['socket'=>'AM4','tdp'=>65]],
-            ['id'=>'mb_asus_b460','name'=>'ASUS B460','category'=>'Motherboard','price'=>110.00,'tier'=>1,'specs'=>['socket'=>'LGA1200','form_factor'=>'ATX','ram_type'=>'DDR4']],
-            ['id'=>'mb_msi_b550','name'=>'MSI B550','category'=>'Motherboard','price'=>140.00,'tier'=>2,'specs'=>['socket'=>'AM4','form_factor'=>'ATX','ram_type'=>'DDR4']],
-            ['id'=>'ram_16_3200','name'=>'16GB DDR4 3200','category'=>'RAM','price'=>70.00,'tier'=>1,'specs'=>['type'=>'DDR4']],
-            ['id'=>'ram_32_5600','name'=>'32GB DDR5 5600','category'=>'RAM','price'=>220.00,'tier'=>3,'specs'=>['type'=>'DDR5']],
-            ['id'=>'gpu_gtx1660','name'=>'NVIDIA GTX 1660','category'=>'GPU','price'=>220.00,'tier'=>1,'specs'=>['tdp'=>120]],
-            ['id'=>'gpu_rtx3060','name'=>'NVIDIA RTX 3060','category'=>'GPU','price'=>400.00,'tier'=>2,'specs'=>['tdp'=>170]],
-            ['id'=>'psu_650','name'=>'650W PSU','category'=>'PSU','price'=>80.00,'tier'=>1,'specs'=>['watt'=>650]],
-            ['id'=>'psu_750','name'=>'750W PSU','category'=>'PSU','price'=>110.00,'tier'=>2,'specs'=>['watt'=>750]],
-            ['id'=>'case_mid','name'=>'Mid Tower Case','category'=>'Case','price'=>60.00,'tier'=>1,'specs'=>['form_factor'=>'ATX']],
-            ['id'=>'case_itx','name'=>'Mini ITX Case','category'=>'Case','price'=>90.00,'tier'=>2,'specs'=>['form_factor'=>'ITX']],
-            ['id'=>'storage_ssd_1tb','name'=>'1TB NVMe SSD','category'=>'Storage','price'=>90.00,'tier'=>1,'specs'=>['type'=>'NVMe']],
+            'components'             => $components,
+            'total_price'            => $totalPrice,
+            'explanation'            => $explanation,
+            'compatibility_warnings' => $compatibilityWarnings,
+            'fps_estimates'          => $fpsEstimates,
         ];
     }
 
-    protected function decisionTreeFilter(array $components, array $input): array
+    protected function selectComponents(?string $budgetTier, ?float $targetPrice, string $purpose, string $cpuPref, string $ramPref, string $formFactor): array
     {
-        $budget = $input['budget'] ?? '<800';
-        $cpuPref = $input['cpu_pref'] ?? '';
-        $ramPref = $input['ram_pref'] ?? '';
-        $formFactor = $input['form_factor'] ?? '';
-        $targetPrice = $input['target_price'] ?? null;
+        $isHighTier = ($budgetTier === '>1500') || ($targetPrice && $targetPrice >= 75000);
+        $isEntryTier = ($budgetTier === '<800') || ($targetPrice && $targetPrice <= 35000);
 
-        $grouped = [];
-        foreach ($components as $c) $grouped[$c['category']][] = $c;
-
-        $candidates = [];
-        foreach ($grouped as $cat => $items) {
-            foreach ($items as $it) {
-                // Budget guard for expensive categories
-                if (in_array($cat, ['CPU','GPU'])) {
-                    if ($budget === '<800' && $it['price'] > 800) continue;
-                    if ($budget === '800-1500' && $it['price'] > 1500) continue;
-                }
-                // CPU preference
-                if ($cat === 'CPU' && $cpuPref) {
-                    if (stripos($it['name'], $cpuPref) === false) continue;
-                }
-                // RAM type preference
-                if ($cat === 'RAM' && $ramPref) {
-                    $specType = $it['specs']['type'] ?? ($it['specs']['ram_type'] ?? null);
-                    if ($specType && $ramPref && strcasecmp($specType, $ramPref) !== 0) continue;
-                }
-                // Form factor
-                if ($formFactor && isset($it['specs']['form_factor']) && $it['specs']['form_factor'] !== $formFactor) {
-                    if (in_array($cat, ['Motherboard','Case'])) continue;
-                }
-                $candidates[$cat][] = $it;
-            }
+        // CPU
+        if ($cpuPref === 'AMD') {
+            $cpu = $isHighTier 
+                ? ['id' => 101, 'name' => 'AMD Ryzen 7 7800X3D', 'category' => 'CPU', 'price' => 24500, 'socket' => 'AM5', 'specs' => '8 Cores / 16 Threads • 96MB L3 Cache']
+                : ['id' => 102, 'name' => 'AMD Ryzen 5 7600X', 'category' => 'CPU', 'price' => 13200, 'socket' => 'AM5', 'specs' => '6 Cores / 12 Threads • 5.3 GHz Boost'];
+        } else {
+            $cpu = $isHighTier
+                ? ['id' => 103, 'name' => 'Intel Core i7-14700K', 'category' => 'CPU', 'price' => 25800, 'socket' => 'LGA1700', 'specs' => '20 Cores / 28 Threads • 5.6 GHz Boost']
+                : ['id' => 104, 'name' => 'Intel Core i5-13400F', 'category' => 'CPU', 'price' => 10800, 'socket' => 'LGA1700', 'specs' => '10 Cores / 16 Threads • 4.6 GHz Boost'];
         }
 
-        $expected = ['CPU','Motherboard','RAM','GPU','Storage','PSU','Case'];
-        foreach ($expected as $e) if (!isset($candidates[$e])) $candidates[$e] = [];
-
-        return $candidates;
-    }
-
-    protected function knnScore(array $builds, array $input, array $candidates): array
-    {
-        $scores = [];
-        $budget = $input['budget'] ?? '<800';
-        $purpose = $input['purpose'] ?? 'General';
-        $targetPrice = $input['target_price'] ?? null;
-
-        foreach ($builds as $b) {
-            $sim = 0;
-            if (($b['purpose'] ?? '') === $purpose) $sim += 2;
-            if ($this->budgetCategory($b['total'] ?? 0) === $budget) $sim += 1;
-            if ($targetPrice && isset($b['total'])) {
-                $diff = abs(($b['total'] ?? 0) - $targetPrice);
-                if ($diff <= ($targetPrice * 0.15)) $sim += 1;
-            }
-            foreach ($b['components'] as $cid) $scores[$cid] = ($scores[$cid] ?? 0) + $sim;
+        // GPU
+        if ($isHighTier) {
+            $gpu = ['id' => 201, 'name' => 'NVIDIA GeForce RTX 4070 Ti Super 16GB', 'category' => 'GPU', 'price' => 52000, 'vram' => '16GB', 'tdp' => 285, 'specs' => '16GB GDDR6X • DLSS 3.5 • Ray Tracing'];
+        } elseif ($isEntryTier) {
+            $gpu = ['id' => 202, 'name' => 'AMD Radeon RX 6600 8GB', 'category' => 'GPU', 'price' => 12900, 'vram' => '8GB', 'tdp' => 132, 'specs' => '8GB GDDR6 • 1080p High Performance'];
+        } else {
+            $gpu = ['id' => 203, 'name' => 'NVIDIA GeForce RTX 4060 Ti 8GB', 'category' => 'GPU', 'price' => 23500, 'vram' => '8GB', 'tdp' => 160, 'specs' => '8GB GDDR6 • DLSS 3 Frame Generation'];
         }
 
-        foreach ($candidates as $cat => $items) foreach ($items as $it) if (!isset($scores[$it['id']])) $scores[$it['id']] = 0;
-
-        return $scores;
-    }
-
-    protected function budgetCategory($total): string
-    {
-        if ($total < 800) return '<800';
-        if ($total <= 1500) return '800-1500';
-        return '>1500';
-    }
-
-    protected function chooseTopPerCategory(array $candidates, array $scores): array
-    {
-        $chosen = [];
-        foreach ($candidates as $cat => $items) {
-            if (empty($items)) { $chosen[$cat] = null; continue; }
-            usort($items, function ($a, $b) use ($scores) {
-                $sa = $scores[$a['id']] ?? 0;
-                $sb = $scores[$b['id']] ?? 0;
-                if ($sa === $sb) return $a['price'] <=> $b['price'];
-                return $sb <=> $sa;
-            });
-            $chosen[$cat] = $items[0];
-        }
-        return $chosen;
-    }
-
-    protected function checkCompatibility(array $chosen): array
-    {
-        $errors = [];
-        $socket = null;
-        $formFactor = null;
-        $ramType = null;
-        $totalTdp = 0;
-        $psuWatt = null;
-
-        foreach ($chosen as $cat => $c) {
-            if (!$c) continue;
-            $specs = $c['specs'] ?? [];
-            if (isset($specs['socket'])) {
-                if ($socket === null) $socket = $specs['socket'];
-                elseif ($socket !== $specs['socket']) $errors[] = "Socket mismatch (expected {$socket}, found {$specs['socket']}).";
-            }
-            if (isset($specs['form_factor'])) {
-                if ($formFactor === null) $formFactor = $specs['form_factor'];
-                elseif ($formFactor !== $specs['form_factor']) $errors[] = "Form factor mismatch (expected {$formFactor}, found {$specs['form_factor']}).";
-            }
-            if (isset($specs['type']) || isset($specs['ram_type'])) {
-                $rt = $specs['type'] ?? $specs['ram_type'] ?? null;
-                if ($ramType === null) $ramType = $rt;
-                elseif ($rt && $ramType !== $rt) $errors[] = "RAM type mismatch (expected {$ramType}, found {$rt}).";
-            }
-            if (isset($specs['tdp'])) $totalTdp += (int)$specs['tdp'];
-            if ($cat === 'PSU' && isset($specs['watt'])) $psuWatt = (int)$specs['watt'];
-        }
-
-        if ($psuWatt === null) $errors[] = "PSU wattage unknown or no PSU selected.";
-        else {
-            $recommended = (int)ceil($totalTdp * 1.2);
-            if ($psuWatt < $recommended) $errors[] = "PSU wattage may be insufficient. Recommended >= {$recommended}W based on estimated TDP {$totalTdp}W.";
-        }
-
-        return $errors;
-    }
-
-    protected function computeImportance(array $component, $score, $category, $purpose, $budget): int
-    {
-        $imp = 0;
-        $imp += ($component['tier'] ?? 1) * 2;
-        $imp += min(10, (int)$score);
-        if ($category === 'GPU' && $purpose === 'Gaming') $imp += 3;
-        if ($category === 'CPU' && $purpose === 'Workstation') $imp += 3;
-        if (($component['price'] ?? 0) > 300) $imp += 1;
-        return (int)$imp;
-    }
-
-    protected function buildEvidence(array $component, $score, array $input): array
-    {
-        $e = [];
-        $e[] = ['label' => 'Tier', 'value' => (string)($component['tier'] ?? 1)];
-        if (!empty($component['specs']['socket'])) $e[] = ['label' => 'Socket', 'value' => $component['specs']['socket']];
-        if (!empty($component['specs']['type'])) $e[] = ['label' => 'RAM', 'value' => $component['specs']['type']];
-        if (!empty($component['specs']['form_factor'])) $e[] = ['label' => 'Form', 'value' => $component['specs']['form_factor']];
-        if (!empty($component['specs']['tdp'])) $e[] = ['label' => 'TDP', 'value' => (string)$component['specs']['tdp'] . 'W'];
-        if ($score > 0) $e[] = ['label' => 'KNN', 'value' => (string)$score];
-        return $e;
-    }
-
-    protected function generateReason(array $component, array $input = [], $score = 0): string
-    {
-        $parts = [];
-        $parts[] = "Price: ₱" . number_format($component['price'] ?? 0, 2);
-        $parts[] = "Tier: " . ($component['tier'] ?? 1);
-        if ($score > 0) $parts[] = "Appears in similar builds (score {$score})";
-        if (!empty($component['specs']['socket'])) $parts[] = "Socket: {$component['specs']['socket']}";
-        return implode('; ', $parts);
-    }
-
-    protected function generateReasonHtml(array $component, array $evidence, int $importance): string
-    {
-        $chips = [];
-        foreach ($evidence as $ev) {
-            $label = htmlspecialchars($ev['label'], ENT_QUOTES, 'UTF-8');
-            $value = htmlspecialchars($ev['value'], ENT_QUOTES, 'UTF-8');
-            $chips[] = "<small class=\"chip\">{$label}: <strong>{$value}</strong></small>";
-        }
-        $chipsHtml = implode(' ', $chips);
-        $name = htmlspecialchars($component['name'], ENT_QUOTES, 'UTF-8');
-        $price = '₱' . number_format($component['price'] ?? 0, 2);
-        return "<div class=\"reason-html\"><div style=\"margin-bottom:6px\"><strong>{$name}</strong> <small style=\"color:#bfbfbf\">{$price}</small></div><div>{$chipsHtml}</div></div>";
-    }
-
-    protected function loadHistoricalBuilds(): array
-    {
-        return [
-            ['id'=>'b1','purpose'=>'Gaming','total'=>1200,'components'=>['cpu_i7_10700','mb_asus_b460','ram_16_3200','gpu_rtx3060','psu_750','case_mid']],
-            ['id'=>'b2','purpose'=>'Office','total'=>700,'components'=>['cpu_i5_10400','mb_asus_b460','ram_16_3200','psu_650','case_mid']],
-            ['id'=>'b3','purpose'=>'Workstation','total'=>2000,'components'=>['cpu_ryzen5_5600','mb_msi_b550','ram_32_5600','gpu_rtx3060','psu_750','case_mid']],
+        // Motherboard
+        $ramType = ($cpu['socket'] === 'AM5' || $ramPref === 'DDR5' || $isHighTier) ? 'DDR5' : 'DDR4';
+        $moboForm = in_array($formFactor, ['ATX', 'mATX', 'ITX']) ? $formFactor : 'ATX';
+        $motherboard = [
+            'id'       => 301,
+            'name'     => ($cpu['socket'] === 'AM5') ? "MSI MAG B650 Mortar {$moboForm} WiFi" : "ASUS TUF Gaming B760-Plus {$moboForm}",
+            'category' => 'Motherboard',
+            'price'    => 10500,
+            'socket'   => $cpu['socket'],
+            'ram_type' => $ramType,
+            'form'     => $moboForm,
+            'specs'    => "Socket {$cpu['socket']} • {$ramType} Support • PCIe 4.0",
         ];
+
+        // RAM
+        $ram = [
+            'id'       => 401,
+            'name'     => $ramType === 'DDR5' ? 'G.Skill Trident Z5 RGB 32GB (2x16GB) DDR5 6000MHz' : 'Corsair Vengeance LPX 16GB (2x8GB) DDR4 3200MHz',
+            'category' => 'RAM',
+            'price'    => $ramType === 'DDR5' ? 7600 : 2900,
+            'type'     => $ramType,
+            'specs'    => $ramType === 'DDR5' ? '32GB Dual Channel • CL30 Ultra Fast' : '16GB Dual Channel • Low Profile',
+        ];
+
+        // Storage
+        $storage = [
+            'id'       => 501,
+            'name'     => $isHighTier ? 'Samsung 990 PRO 2TB PCIe 4.0 NVMe M.2 SSD' : 'Kingston NV2 1TB PCIe 4.0 NVMe M.2 SSD',
+            'category' => 'Storage',
+            'price'    => $isHighTier ? 8900 : 3800,
+            'specs'    => $isHighTier ? 'Read up to 7450 MB/s • High Endurance' : 'Read up to 3500 MB/s • Reliable NVMe',
+        ];
+
+        // Power Supply
+        $psuWattage = $isHighTier ? 750 : 650;
+        $psu = [
+            'id'       => 601,
+            'name'     => "CORSAIR RM{$psuWattage}e {$psuWattage}W 80+ Gold Fully Modular",
+            'category' => 'Power Supply',
+            'price'    => $isHighTier ? 6200 : 4400,
+            'wattage'  => $psuWattage,
+            'specs'    => "{$psuWattage}W Rating • 80 PLUS Gold Certified • Zero RPM Fan Mode",
+        ];
+
+        // Case
+        $case = [
+            'id'       => 701,
+            'name'     => "NZXT H5 Flow {$moboForm} Tempered Glass Mid-Tower",
+            'category' => 'Case',
+            'price'    => 4600,
+            'form'     => $moboForm,
+            'specs'    => 'Perforated Front Panel • Dual Pre-installed Fans • Clean Cable Management',
+        ];
+
+        return [$cpu, $gpu, $motherboard, $ram, $storage, $psu, $case];
+    }
+
+    protected function checkCompatibility(array $components): array
+    {
+        $warnings = [];
+        $cpu = collect($components)->firstWhere('category', 'CPU');
+        $mobo = collect($components)->firstWhere('category', 'Motherboard');
+        $ram = collect($components)->firstWhere('category', 'RAM');
+        $gpu = collect($components)->firstWhere('category', 'GPU');
+        $psu = collect($components)->firstWhere('category', 'Power Supply');
+
+        if ($cpu && $mobo && isset($cpu['socket'], $mobo['socket']) && $cpu['socket'] !== $mobo['socket']) {
+            $warnings[] = "Socket Incompatibility: CPU requires {$cpu['socket']}, but Motherboard has {$mobo['socket']}.";
+        }
+
+        if ($mobo && $ram && isset($mobo['ram_type'], $ram['type']) && $mobo['ram_type'] !== $ram['type']) {
+            $warnings[] = "Memory Mismatch: Motherboard requires {$mobo['ram_type']}, but {$ram['type']} was selected.";
+        }
+
+        $gpuTdp = $gpu['tdp'] ?? 150;
+        $recommendedWattage = $gpuTdp + 280;
+        if ($psu && isset($psu['wattage']) && $psu['wattage'] < $recommendedWattage) {
+            $warnings[] = "Power Headroom Warning: System estimated load is ~{$recommendedWattage}W. The selected {$psu['wattage']}W PSU may operate near maximum load.";
+        }
+
+        return $warnings;
+    }
+
+    protected function calculateFpsEstimates(array $components, string $resolution): array
+    {
+        $gpu = collect($components)->firstWhere('category', 'GPU');
+        $gpuName = $gpu['name'] ?? '';
+
+        $resMod = match ($resolution) {
+            '1440p' => 0.78,
+            '4k'    => 0.50,
+            default => 1.00,
+        };
+
+        $gpuMod = 1.0;
+        if (str_contains($gpuName, '4090')) $gpuMod = 2.4;
+        elseif (str_contains($gpuName, '4080') || str_contains($gpuName, '4070 Ti')) $gpuMod = 1.85;
+        elseif (str_contains($gpuName, '4070') || str_contains($gpuName, '7800 XT')) $gpuMod = 1.45;
+        elseif (str_contains($gpuName, '4060 Ti')) $gpuMod = 1.20;
+        elseif (str_contains($gpuName, '6600')) $gpuMod = 0.80;
+
+        $games = [
+            ['name' => 'Valorant / CS2', 'icon' => 'fa-crosshair', 'base' => 310],
+            ['name' => 'Call of Duty: Warzone', 'icon' => 'fa-person-rifle', 'base' => 145],
+            ['name' => 'Cyberpunk 2077', 'icon' => 'fa-vr-cardboard', 'base' => 80],
+            ['name' => 'GTA V / GTA VI Ready', 'icon' => 'fa-car-side', 'base' => 120],
+            ['name' => 'Apex Legends', 'icon' => 'fa-shield-halved', 'base' => 165],
+        ];
+
+        $results = [];
+        foreach ($games as $game) {
+            $calcBase = $game['base'] * $resMod * $gpuMod;
+
+            $results[] = [
+                'name'    => $game['name'],
+                'icon'    => $game['icon'],
+                'lowFps'  => (int) round($calcBase * 1.35),
+                'medFps'  => (int) round($calcBase * 1.00),
+                'highFps' => (int) round($calcBase * 0.75),
+            ];
+        }
+
+        return $results;
+    }
+
+    protected function generateExplanation(string $purpose, string $resolution, float $totalPrice, array $components): string
+    {
+        $gpu = collect($components)->firstWhere('category', 'GPU')['name'] ?? 'Graphics Card';
+        $cpu = collect($components)->firstWhere('category', 'CPU')['name'] ?? 'Processor';
+
+        return "This build is engineered for maximum synergy between the {$cpu} and {$gpu}. Optimized specifically for {$purpose} at {$resolution} resolution, ensuring high framerates, low thermal throttling, and direct upgrade pathways.";
     }
 }
